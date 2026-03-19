@@ -1,6 +1,6 @@
 {
   "name": "openwolf",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Token-conscious AI brain for Claude Code projects",
   "type": "module",
   "bin": {
@@ -21,7 +21,7 @@
     "chokidar": "^4.0.0",
     "commander": "^12.0.0",
     "express": "^5.0.0",
-"node-cron": "^3.0.3",
+    "node-cron": "^3.0.3",
     "open": "^10.0.0",
     "ws": "^8.18.0"
   },
