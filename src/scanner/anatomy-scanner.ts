@@ -41,7 +41,7 @@ const BINARY_EXTENSIONS = new Set([
 const CODE_EXTENSIONS = new Set([
   ".ts", ".js", ".tsx", ".jsx", ".py", ".rs", ".go", ".java",
   ".c", ".cpp", ".h", ".css", ".scss", ".sql", ".sh", ".yaml",
-  ".yml", ".json", ".toml", ".xml",
+  ".yml", ".json", ".toml", ".xml", ".dart",
 ]);
 
 const PROSE_EXTENSIONS = new Set([".md", ".txt", ".rst", ".adoc"]);
