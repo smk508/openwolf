@@ -222,6 +222,10 @@ OpenWolf is not an AI wrapper. It is 6 hook scripts and a `.wolf/` directory. It
 - Optional: PM2 for persistent background tasks
 - Optional: `puppeteer-core` for Design QC screenshots
 
+## Dashboard network exposure
+
+The dashboard server binds to `127.0.0.1` by default. Its HTTP and WebSocket endpoints are not authenticated, so loopback-only is the safe default — they hand out the contents of `.wolf/` and can trigger cron tasks (including `ai_task` actions that shell out to `claude -p`). If you actually need to reach the dashboard from another machine, set `openwolf.dashboard.bind` in `.wolf/config.json` to `"0.0.0.0"` (or a specific interface) and put it behind your own authenticated reverse proxy.
+
 ## Limitations
 
 - Claude Code hooks are a relatively new feature. OpenWolf falls back to `CLAUDE.md` instructions when hooks don't fire.

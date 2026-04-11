@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
+import type { IncomingMessage } from "node:http";
 import express from "express";
 import { WebSocketServer, WebSocket } from "ws";
 import { findProjectRoot } from "../scanner/project-root.js";
@@ -19,7 +20,7 @@ const wolfDir = path.join(projectRoot, ".wolf");
 interface WolfConfig {
   openwolf: {
     daemon: { port: number; log_level: string };
-    dashboard: { enabled: boolean; port: number };
+    dashboard: { enabled: boolean; port: number; bind?: string };
     cron: { enabled: boolean; heartbeat_interval_minutes: number };
   };
 }
@@ -27,10 +28,15 @@ interface WolfConfig {
 const config = readJSON<WolfConfig>(path.join(wolfDir, "config.json"), {
   openwolf: {
     daemon: { port: 18790, log_level: "info" },
-    dashboard: { enabled: true, port: 18791 },
+    dashboard: { enabled: true, port: 18791, bind: "127.0.0.1" },
     cron: { enabled: true, heartbeat_interval_minutes: 30 },
   },
 });
+
+// Dashboard bind address. Defaults to loopback so the unauthenticated API
+// and WebSocket endpoints are not exposed to the LAN. Set to "0.0.0.0" in
+// .wolf/config.json only if you explicitly need network access.
+const bind = config.openwolf.dashboard.bind ?? "127.0.0.1";
 
 const logger = new Logger(
   path.join(wolfDir, "daemon.log"),
@@ -187,12 +193,41 @@ app.get("/{*path}", (_req, res) => {
 
 // Start HTTP server
 const port = config.openwolf.dashboard.port;
-const server = app.listen(port, () => {
-  logger.info(`Dashboard server listening on port ${port}`);
+const server = app.listen(port, bind, () => {
+  logger.info(`Dashboard server listening on ${bind}:${port}`);
+  if (bind !== "127.0.0.1" && bind !== "localhost" && bind !== "::1") {
+    logger.warn(
+      `Dashboard bound to ${bind} — HTTP and WebSocket endpoints are reachable from the network. ` +
+        `None of these endpoints require authentication.`
+    );
+  }
 });
 
+// Allow same-origin WebSocket connections (dashboard loaded from
+// http://<bind>:<port>) and non-browser clients (no Origin header). Reject
+// any other Origin to prevent a visited webpage from driving the daemon.
+function isAllowedOrigin(origin: string | undefined): boolean {
+  if (!origin) return true; // non-browser clients don't send Origin
+  const allowed = new Set<string>([
+    `http://127.0.0.1:${port}`,
+    `http://localhost:${port}`,
+    `http://[::1]:${port}`,
+  ]);
+  if (bind !== "127.0.0.1" && bind !== "localhost" && bind !== "::1") {
+    allowed.add(`http://${bind}:${port}`);
+  }
+  return allowed.has(origin);
+}
+
 // WebSocket server
-const wss = new WebSocketServer({ server });
+const wss = new WebSocketServer({
+  server,
+  verifyClient: (info: { origin: string; req: IncomingMessage; secure: boolean }) => {
+    if (isAllowedOrigin(info.origin || undefined)) return true;
+    logger.warn(`Rejected WebSocket upgrade: origin=${info.origin}`);
+    return false;
+  },
+});
 
 wss.on("connection", (ws) => {
   wsClients.add(ws);
