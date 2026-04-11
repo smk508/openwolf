@@ -38,10 +38,17 @@ const BINARY_EXTENSIONS = new Set([
   ".lock",
 ]);
 
+// Keep in sync with CODE_EXTS in src/tracker/token-estimator.ts
 const CODE_EXTENSIONS = new Set([
   ".ts", ".js", ".tsx", ".jsx", ".py", ".rs", ".go", ".java",
   ".c", ".cpp", ".h", ".css", ".scss", ".sql", ".sh", ".yaml",
   ".yml", ".json", ".toml", ".xml", ".dart",
+  ".kt", ".kts", ".swift", ".m", ".mm",
+  ".hpp", ".hh", ".cc", ".cxx",
+  ".cs", ".rb", ".php", ".lua",
+  ".vue", ".svelte", ".html", ".htm",
+  ".proto", ".graphql", ".gql", ".tf",
+  ".bash", ".zsh", ".fish",
 ]);
 
 const PROSE_EXTENSIONS = new Set([".md", ".txt", ".rst", ".adoc"]);

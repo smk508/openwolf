@@ -1,9 +1,16 @@
 import * as path from "node:path";
 
+// Keep in sync with CODE_EXTENSIONS in src/scanner/anatomy-scanner.ts
 const CODE_EXTS = new Set([
   ".ts", ".js", ".tsx", ".jsx", ".py", ".rs", ".go", ".java",
   ".c", ".cpp", ".h", ".css", ".scss", ".sql", ".sh", ".yaml",
-  ".yml", ".json", ".toml", ".xml",
+  ".yml", ".json", ".toml", ".xml", ".dart",
+  ".kt", ".kts", ".swift", ".m", ".mm",
+  ".hpp", ".hh", ".cc", ".cxx",
+  ".cs", ".rb", ".php", ".lua",
+  ".vue", ".svelte", ".html", ".htm",
+  ".proto", ".graphql", ".gql", ".tf",
+  ".bash", ".zsh", ".fish",
 ]);
 
 const PROSE_EXTS = new Set([".md", ".txt", ".rst", ".adoc"]);
