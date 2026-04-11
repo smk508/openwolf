@@ -6,23 +6,25 @@ OpenWolf operates as invisible middleware between you and Claude Code. It has th
 
 Every OpenWolf project has a `.wolf/` folder containing:
 
-| File | Purpose |
-|------|---------|
-| `OPENWOLF.md` | Master instructions Claude follows every turn |
-| `anatomy.md` | File index with descriptions and token estimates |
-| `cerebrum.md` | Learned preferences, conventions, and Do-Not-Repeat list |
-| `memory.md` | Chronological action log (append-only per session) |
-| `identity.md` | Project name, AI role, constraints |
-| `config.json` | OpenWolf configuration |
-| `token-ledger.json` | Lifetime token usage statistics |
-| `buglog.json` | Bug encounter/resolution memory |
-| `cron-manifest.json` | Scheduled task definitions |
-| `cron-state.json` | Cron execution state and dead letter queue |
-| `suggestions.json` | AI-generated project improvement suggestions |
-| `designqc-report.json` | Design QC capture metadata and results |
-| `reframe-frameworks.md` | UI framework knowledge base for Reframe |
+| File | Purpose | Worktree |
+|------|---------|----------|
+| `OPENWOLF.md` | Master instructions Claude follows every turn | Shared |
+| `anatomy.md` | File index with descriptions and token estimates | Local |
+| `cerebrum.md` | Learned preferences, conventions, and Do-Not-Repeat list | Shared |
+| `memory.md` | Chronological action log (append-only per session) | Local |
+| `identity.md` | Project name, AI role, constraints | Shared |
+| `config.json` | OpenWolf configuration | Shared |
+| `token-ledger.json` | Lifetime token usage statistics | Shared |
+| `buglog.json` | Bug encounter/resolution memory | Shared |
+| `cron-manifest.json` | Scheduled task definitions | Shared |
+| `cron-state.json` | Cron execution state and dead letter queue | Shared |
+| `suggestions.json` | AI-generated project improvement suggestions | Shared |
+| `designqc-report.json` | Design QC capture metadata and results | Shared |
+| `reframe-frameworks.md` | UI framework knowledge base for Reframe | Shared |
 
 **Markdown is source of truth** for human-readable state. JSON is for machine-readable state only.
+
+The **Worktree** column indicates where the file lives when running in a git worktree. "Shared" files live in the main repo's `.wolf/` and persist across worktrees. "Local" files live in each worktree's own `.wolf/`. In a normal repo, all files are in the same `.wolf/` directory. See [Git Worktree Support](#git-worktree-support) below for details.
 
 ## Hooks -- The Enforcement Layer
 
@@ -146,6 +148,51 @@ The daemon is optional. OpenWolf works without it -- hooks are the primary layer
 The daemon's AI tasks (`cerebrum-reflection` and `project-suggestions`) use `claude -p` to invoke the Claude CLI. These use your **Claude subscription credentials** from `~/.claude/.credentials.json` -- not API credits.
 
 If `ANTHROPIC_API_KEY` is set in your environment, OpenWolf automatically strips it when spawning `claude -p` to ensure the subscription OAuth token is used instead.
+
+## Git Worktree Support
+
+OpenWolf works with git worktrees out of the box. This is essential for tools like [Conductor](https://conductor.app) that run multiple Claude agents in parallel, each in its own worktree.
+
+### The problem
+
+Without worktree support, each worktree gets its own isolated `.wolf/` directory. Learnings, bug fixes, and metrics are lost when the worktree is cleaned up, and there is no cross-pollination between concurrent agent sessions.
+
+### Two-tier `.wolf/` directory
+
+When OpenWolf detects that it is running inside a git worktree, it splits `.wolf/` into two tiers:
+
+**Shared brain** (stored in the main repo's `.wolf/`):
+| File | Why shared |
+|------|-----------|
+| `cerebrum.md` | Learnings and preferences apply to the whole project |
+| `buglog.json` | Bug fixes are relevant across all branches |
+| `token-ledger.json` | Lifetime metrics should accumulate, not fragment |
+| `identity.md` | Agent identity is project-wide |
+| `config.json` | Configuration applies globally |
+| `OPENWOLF.md` | Protocol is the same everywhere |
+
+**Local workspace** (stored in the worktree's `.wolf/`):
+| File | Why local |
+|------|----------|
+| `anatomy.md` | Reflects the branch's file structure, which may differ |
+| `memory.md` | Session action log -- concurrent writes from multiple agents would conflict |
+| `hooks/_session.json` | Current session state is ephemeral |
+| `hooks/*.js` | Hook scripts need to exist locally for Claude Code to run them |
+
+### How worktree detection works
+
+OpenWolf detects worktrees using pure filesystem reads (no git commands, so hooks stay fast):
+
+1. Checks if `.git` is a **file** (worktrees) rather than a **directory** (normal repos)
+2. Parses the `gitdir:` pointer from the `.git` file
+3. Reads the `commondir` file inside that gitdir to find the main repo's `.git` directory
+4. Resolves the parent directory as the main repo root
+
+This detection is cached per process -- hooks only pay the cost once per invocation.
+
+### When not in a worktree
+
+Everything works exactly as before. The shared and local `.wolf/` directories are the same path, so there is no behavior change for normal repos.
 
 ## Token Tracking
 

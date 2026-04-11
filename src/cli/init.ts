@@ -5,7 +5,7 @@ import { execSync } from "node:child_process";
 import { findProjectRoot } from "../scanner/project-root.js";
 import { scanProject } from "../scanner/anatomy-scanner.js";
 import { readJSON, writeJSON, readText, writeText } from "../utils/fs-safe.js";
-import { ensureDir } from "../utils/paths.js";
+import { ensureDir, resolveMainRepoRoot } from "../utils/paths.js";
 import { isWindows } from "../utils/platform.js";
 import { registerProject } from "./registry.js";
 
@@ -24,24 +24,30 @@ function getVersion(): string {
 }
 
 // Files that are safe to overwrite on upgrade (config/protocol, not user data)
+// These are shared brain files — in a worktree they go to the main repo's .wolf/
 const ALWAYS_OVERWRITE = [
   "OPENWOLF.md",
   "config.json",
   "reframe-frameworks.md",
 ];
 
-// Files that contain user/session data — only create if missing, never overwrite
-const CREATE_IF_MISSING = [
+// Shared brain files — create if missing, never overwrite. In a worktree, these go to
+// the main repo's .wolf/ so they persist across worktrees and sessions.
+const CREATE_IF_MISSING_SHARED = [
   "identity.md",
   "cerebrum.md",
-  "memory.md",
-  "anatomy.md",
   "token-ledger.json",
   "buglog.json",
   "cron-manifest.json",
   "cron-state.json",
   "designqc-report.json",
   "suggestions.json",
+];
+
+// Local files — always per-worktree (branch-specific or session-specific)
+const CREATE_IF_MISSING_LOCAL = [
+  "memory.md",
+  "anatomy.md",
 ];
 
 // Use $CLAUDE_PROJECT_DIR so hooks resolve correctly even if CWD changes during a session
@@ -130,18 +136,32 @@ export async function initCommand(): Promise<void> {
   const projectRoot = findProjectRoot();
   console.log(`Project root: ${projectRoot}`);
 
+  // Detect git worktree — shared brain files go to the main repo's .wolf/
+  const mainRepoRoot = resolveMainRepoRoot(projectRoot);
+  const isWorktreeInit = mainRepoRoot !== null;
+
   const wolfDir = path.join(projectRoot, ".wolf");
+  const sharedWolfDir = isWorktreeInit ? path.join(mainRepoRoot, ".wolf") : wolfDir;
   const isUpgrade = fs.existsSync(wolfDir);
+  const isSharedUpgrade = isWorktreeInit && fs.existsSync(sharedWolfDir);
 
   const version = getVersion();
 
+  if (isWorktreeInit) {
+    console.log(`Worktree detected — shared brain at: ${sharedWolfDir}`);
+  }
   if (isUpgrade) {
     console.log(`Upgrading OpenWolf to v${version}...`);
   }
 
-  // Create .wolf/ directory
+  // Create local .wolf/ directory (always in current project root)
   ensureDir(wolfDir);
   ensureDir(path.join(wolfDir, "hooks"));
+
+  // Create shared .wolf/ directory (main repo, if worktree)
+  if (isWorktreeInit && sharedWolfDir !== wolfDir) {
+    ensureDir(sharedWolfDir);
+  }
 
   // Find templates directory
   const actualTemplatesDir = findTemplatesDir();
@@ -150,12 +170,25 @@ export async function initCommand(): Promise<void> {
   let createdCount = 0;
   let skippedCount = 0;
 
+  // ALWAYS_OVERWRITE files → shared dir (protocol/config, shared brain)
   for (const file of ALWAYS_OVERWRITE) {
-    writeTemplateFile(actualTemplatesDir, wolfDir, file);
+    writeTemplateFile(actualTemplatesDir, sharedWolfDir, file);
     createdCount++;
   }
 
-  for (const file of CREATE_IF_MISSING) {
+  // Shared brain files → shared dir
+  for (const file of CREATE_IF_MISSING_SHARED) {
+    const destPath = path.join(sharedWolfDir, file);
+    if (fs.existsSync(destPath)) {
+      skippedCount++;
+    } else {
+      writeTemplateFile(actualTemplatesDir, sharedWolfDir, file);
+      createdCount++;
+    }
+  }
+
+  // Local files → local dir (per-worktree)
+  for (const file of CREATE_IF_MISSING_LOCAL) {
     const destPath = path.join(wolfDir, file);
     if (fs.existsSync(destPath)) {
       skippedCount++;
@@ -166,13 +199,14 @@ export async function initCommand(): Promise<void> {
   }
 
   // --- Cerebrum: seed project info only if fresh ---
-  if (!isUpgrade) {
-    seedCerebrum(wolfDir, projectRoot);
-    seedIdentity(wolfDir, projectRoot);
+  const isFirstInit = isWorktreeInit ? !isSharedUpgrade : !isUpgrade;
+  if (isFirstInit) {
+    seedCerebrum(sharedWolfDir, projectRoot);
+    seedIdentity(sharedWolfDir, projectRoot);
   }
 
   // --- Token ledger: set created_at only if empty ---
-  const ledgerPath = path.join(wolfDir, "token-ledger.json");
+  const ledgerPath = path.join(sharedWolfDir, "token-ledger.json");
   const ledger = readJSON<Record<string, unknown>>(ledgerPath, {});
   if (!ledger.created_at) {
     ledger.created_at = new Date().toISOString();
@@ -281,6 +315,10 @@ export async function initCommand(): Promise<void> {
     console.log(`  ✓ CLAUDE.md updated`);
     console.log(`  ✓ .claude/rules/openwolf.md created`);
     console.log(`  ✓ Anatomy scan: ${fileCount} files indexed`);
+  }
+  if (isWorktreeInit) {
+    console.log(`  ✓ Worktree mode: shared brain at ${sharedWolfDir}`);
+    console.log(`  ✓ Local .wolf/ for anatomy, memory, and session data`);
   }
   console.log(`  ✓ Daemon: ${daemonStatus}`);
   console.log("");

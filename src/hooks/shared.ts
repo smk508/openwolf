@@ -8,6 +8,77 @@ export function getWolfDir(): string {
   return path.join(projectDir, ".wolf");
 }
 
+// ─── Git Worktree Support ────────────────────────────────────────
+// In tools like Conductor, each workspace is a git worktree. Brain files
+// (cerebrum, buglog, ledger) live in the main repo's .wolf/ so they
+// persist across worktrees. Session/branch files stay local.
+//
+// NOTE: This logic is duplicated in src/utils/paths.ts for CLI commands.
+// The hooks build separately (tsconfig.hooks.json) and cannot import from src/utils/.
+// Keep both copies in sync.
+
+// Files that live in the shared (main repo) .wolf/ directory
+export const SHARED_WOLF_FILES = new Set([
+  "cerebrum.md", "buglog.json", "token-ledger.json", "identity.md",
+  "config.json", "OPENWOLF.md", "reframe-frameworks.md",
+  "cron-manifest.json", "cron-state.json", "designqc-report.json", "suggestions.json",
+]);
+
+// Cached result: undefined = not yet checked, null = not a worktree, string = main repo root
+let _mainRepoRoot: string | null | undefined;
+
+/**
+ * Detect if running in a git worktree. If so, return the main repo root.
+ * Uses pure filesystem reads (no git commands) for hook performance.
+ *
+ * In a worktree, .git is a file containing "gitdir: /path/to/main/.git/worktrees/<name>".
+ * Inside that gitdir, a "commondir" file points back to the main .git directory.
+ */
+export function resolveMainRepoRoot(): string | null {
+  if (_mainRepoRoot !== undefined) return _mainRepoRoot;
+
+  const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+  const gitPath = path.join(projectDir, ".git");
+
+  try {
+    const stat = fs.lstatSync(gitPath);
+    if (stat.isDirectory()) {
+      _mainRepoRoot = null; // Normal repo, not a worktree
+      return null;
+    }
+    // .git is a file → this is a worktree
+    const content = fs.readFileSync(gitPath, "utf-8").trim();
+    const match = content.match(/^gitdir:\s*(.+)$/);
+    if (!match) {
+      _mainRepoRoot = null;
+      return null;
+    }
+    const gitdir = path.resolve(projectDir, match[1]);
+    const commondirPath = path.join(gitdir, "commondir");
+    const commondir = fs.readFileSync(commondirPath, "utf-8").trim();
+    const mainGitDir = path.resolve(gitdir, commondir);
+    _mainRepoRoot = path.dirname(mainGitDir); // Parent of .git is repo root
+    return _mainRepoRoot;
+  } catch {
+    _mainRepoRoot = null;
+    return null;
+  }
+}
+
+/**
+ * Returns the shared .wolf/ directory for brain files.
+ * In a worktree, this is the main repo's .wolf/. Otherwise, same as getWolfDir().
+ */
+export function getSharedWolfDir(): string {
+  const mainRoot = resolveMainRepoRoot();
+  if (mainRoot) return path.join(mainRoot, ".wolf");
+  return getWolfDir();
+}
+
+export function isWorktree(): boolean {
+  return resolveMainRepoRoot() !== null;
+}
+
 /**
  * Bail out silently if .wolf/ directory doesn't exist in the current project.
  * Call this at the top of every hook to avoid crashes in non-OpenWolf projects.

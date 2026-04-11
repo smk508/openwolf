@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as crypto from "node:crypto";
 import {
-  getWolfDir, ensureWolfDir, readJSON, writeJSON, readMarkdown, parseAnatomy, serializeAnatomy,
+  getWolfDir, getSharedWolfDir, ensureWolfDir, readJSON, writeJSON, readMarkdown, parseAnatomy, serializeAnatomy,
   extractDescription, estimateTokens, appendMarkdown, timeShort, readStdin, normalizePath
 } from "./shared.js";
 
@@ -171,10 +171,10 @@ async function main(): Promise<void> {
     }
   } catch {}
 
-  // 4. Auto-detect bug-fix patterns and log them
+  // 4. Auto-detect bug-fix patterns and log them (shared brain file)
   try {
     if (oldStr && newStr) {
-      autoDetectBugFix(wolfDir, absolutePath, projectRoot, oldStr, newStr);
+      autoDetectBugFix(getSharedWolfDir(), absolutePath, projectRoot, oldStr, newStr);
     }
   } catch {}
 

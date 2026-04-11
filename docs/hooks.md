@@ -38,14 +38,20 @@ All hooks are **pure Node.js file I/O**. No network calls, no AI, no external de
 └──────────────┘      └──────────┘
 ```
 
+## Shared vs Local Files
+
+In a git worktree, hooks automatically resolve brain files (cerebrum, buglog, token-ledger) from the **main repo's** `.wolf/`, while session-specific files (anatomy, memory, session state) stay in the **worktree's** `.wolf/`. See [Git Worktree Support](/how-it-works#git-worktree-support) for details.
+
+In a normal repo (not a worktree), all files live in the same `.wolf/` directory as before.
+
 ## `session-start.js`
 
 **Fires:** When a Claude Code session begins.
 
 **What it does:**
-1. Creates a fresh `_session.json` in `.wolf/hooks/` with a unique session ID
-2. Appends a session header to `.wolf/memory.md` with a table template
-3. Increments the `total_sessions` counter in `token-ledger.json`
+1. Creates a fresh `_session.json` in `.wolf/hooks/` with a unique session ID (local)
+2. Appends a session header to `.wolf/memory.md` with a table template (local)
+3. Increments the `total_sessions` counter in `token-ledger.json` (shared in worktrees)
 
 **Timeout:** 5 seconds
 
@@ -76,9 +82,10 @@ All hooks are **pure Node.js file I/O**. No network calls, no AI, no external de
 **Stdin:** `{ "tool_name": "Write", "tool_input": { "file_path": "...", "content": "..." } }`
 
 **What it does:**
-1. Reads `cerebrum.md` and extracts entries from the `## Do-Not-Repeat` section
+1. Reads `cerebrum.md` (shared in worktrees) and extracts entries from the `## Do-Not-Repeat` section
 2. For each entry, checks if the content being written contains flagged patterns
 3. If matched: writes a warning to stderr. _"⚠️ OpenWolf cerebrum warning: 'never use var', check your code"_
+4. Searches `buglog.json` (shared in worktrees) for past bugs in the same file
 
 **Pattern matching:** Simple regex on quoted strings and "never use X" / "avoid X" phrases. No LLM involved.
 
@@ -109,9 +116,10 @@ All hooks are **pure Node.js file I/O**. No network calls, no AI, no external de
 **Stdin:** `{ "tool_name": "Write", "tool_input": { "file_path": "...", "content": "..." } }`
 
 **What it does:**
-1. **Updates `anatomy.md`**: reads the written file, extracts a description, estimates tokens, upserts the entry in the correct directory section. Writes atomically (temp + rename).
-2. **Appends to `memory.md`**: logs the action with timestamp, file path, and token estimate.
-3. **Records in `_session.json`**: file, action type, tokens, timestamp.
+1. **Updates `anatomy.md`** (local): reads the written file, extracts a description, estimates tokens, upserts the entry in the correct directory section. Writes atomically (temp + rename).
+2. **Appends to `memory.md`** (local): logs the action with timestamp, file path, and token estimate.
+3. **Records in `_session.json`** (local): file, action type, tokens, timestamp.
+4. **Auto-detects bug fixes** and logs to `buglog.json` (shared in worktrees).
 
 **Timeout:** 10 seconds (longer because anatomy update involves file parsing)
 
@@ -122,10 +130,10 @@ All hooks are **pure Node.js file I/O**. No network calls, no AI, no external de
 **Fires:** When Claude finishes a response.
 
 **What it does:**
-1. Reads `_session.json` for accumulated session data
+1. Reads `_session.json` (local) for accumulated session data
 2. If there's been any activity (reads or writes):
    - Builds a session entry with read/write totals
-   - Appends the session to `token-ledger.json`
+   - Appends the session to `token-ledger.json` (shared in worktrees)
    - Updates lifetime counters
    - Calculates estimated savings (anatomy hits + blocked repeated reads)
 

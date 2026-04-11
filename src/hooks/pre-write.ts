@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { getWolfDir, ensureWolfDir, readJSON, readMarkdown, readStdin } from "./shared.js";
+import { getWolfDir, getSharedWolfDir, ensureWolfDir, readJSON, readMarkdown, readStdin } from "./shared.js";
 
 interface BugEntry {
   id: string;
@@ -19,6 +19,7 @@ interface BugLog {
 async function main(): Promise<void> {
   ensureWolfDir();
   const wolfDir = getWolfDir();
+  const sharedDir = getSharedWolfDir();
 
   const raw = await readStdin();
   let input: { tool_input?: { content?: string; old_string?: string; new_string?: string; file_path?: string; path?: string } };
@@ -38,14 +39,14 @@ async function main(): Promise<void> {
 
   if (!allContent.trim()) { process.exit(0); return; }
 
-  // 1. Cerebrum Do-Not-Repeat check
-  checkCerebrum(wolfDir, allContent);
+  // 1. Cerebrum Do-Not-Repeat check (shared brain file)
+  checkCerebrum(sharedDir, allContent);
 
-  // 2. Bug log: search for similar past bugs when editing code
+  // 2. Bug log: search for similar past bugs when editing code (shared brain file)
   // This fires when Claude is about to edit a file — if the edit looks like a fix
   // (changing error handling, modifying catch blocks, etc.), check the bug log
   if (filePath && (oldStr || content)) {
-    checkBugLog(wolfDir, filePath, oldStr, newStr, content);
+    checkBugLog(sharedDir, filePath, oldStr, newStr, content);
   }
 
   process.exit(0);
