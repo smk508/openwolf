@@ -165,6 +165,29 @@ OpenWolf ships a knowledge file (`.wolf/reframe-frameworks.md`) that Claude read
 
 There is no CLI command for reframe. It works through Claude's normal conversation flow.
 
+## Git Worktrees and Conductor
+
+OpenWolf supports git worktrees natively. If you use tools like [Conductor](https://conductor.app) that run multiple Claude agents in parallel worktrees, the brain (cerebrum, buglog, token ledger) is automatically shared across all worktrees via the main repo's `.wolf/` directory.
+
+```bash
+# In a worktree, init detects the setup automatically
+cd /path/to/worktree
+openwolf init
+```
+
+You'll see:
+
+```
+  Worktree detected — shared brain at: /path/to/main-repo/.wolf
+  ✓ OpenWolf initialized
+  ✓ Worktree mode: shared brain at /path/to/main-repo/.wolf
+  ✓ Local .wolf/ for anatomy, memory, and session data
+```
+
+No extra configuration needed. Learnings, bug fixes, and metrics persist in the main repo even when worktrees are cleaned up. Each worktree gets its own anatomy (reflecting the branch's files) and session logs.
+
+See [How It Works: Git Worktree Support](/how-it-works#git-worktree-support) for technical details.
+
 ::: tip Windows path separators
 If you see path errors on Windows, ensure you're using a recent Node.js 20+ release. OpenWolf normalizes paths internally, but some edge cases require Node 20.10+.
 :::

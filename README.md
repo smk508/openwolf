@@ -210,6 +210,10 @@ Auto-detects your dev server, captures viewport-height JPEG sections of every ro
 
 Ask Claude to help you pick a UI framework. OpenWolf ships a curated knowledge base of 12 frameworks (shadcn/ui, Aceternity, Magic UI, DaisyUI, HeroUI, Chakra, Flowbite, Preline, Park UI, Origin UI, Headless UI, Cult UI) with battle-tested migration prompts. Claude reads `.wolf/reframe-frameworks.md`, asks you a few questions, and executes the migration with the right prompt for your project.
 
+## Git Worktrees
+
+OpenWolf supports git worktrees natively. Tools like [Conductor](https://conductor.app) run multiple Claude agents in parallel worktrees -- OpenWolf automatically shares brain files (cerebrum, buglog, token ledger) across all worktrees via the main repo's `.wolf/`, while keeping session-specific files local. No configuration needed -- `openwolf init` detects worktrees automatically.
+
 ## How OpenWolf Compares
 
 OpenWolf is not an AI wrapper. It is 6 hook scripts and a `.wolf/` directory. It doesn't run your AI for you or change your workflow. It gives Claude Code what it lacks: a project map so it reads less, a memory so it learns faster, and a ledger so you see where tokens go.

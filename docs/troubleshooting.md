@@ -229,6 +229,36 @@ openwolf scan
 
 Then re-run `openwolf scan --check` to confirm it now exits with code 0. This is useful in CI pipelines to enforce that anatomy is kept current.
 
+## Worktree: brain files not shared
+
+**Symptom:** Running `openwolf status` in a worktree does not show "Worktree: yes" and brain files are being stored locally instead of in the main repo.
+
+**Cause:** OpenWolf detects worktrees by checking if `.git` is a file (not a directory). If `.git` is missing or the `commondir` file inside the gitdir is unreadable, detection fails silently and OpenWolf falls back to local-only mode.
+
+**Fix:** Verify the worktree is properly set up:
+
+```bash
+# Should show a file, not a directory
+ls -la .git
+
+# Should contain "gitdir: /path/to/main/.git/worktrees/<name>"
+cat .git
+```
+
+If the `.git` file exists and points to a valid gitdir, re-run `openwolf init` in the worktree.
+
+## Worktree: shared .wolf/ missing
+
+**Symptom:** Hooks warn about missing cerebrum.md or buglog.json in a worktree.
+
+**Cause:** The main repo's `.wolf/` directory was deleted or never initialized.
+
+**Fix:** Run `openwolf init` in either the main repo or the worktree. Init automatically creates the shared `.wolf/` directory in the main repo when it detects a worktree.
+
+```bash
+openwolf init
+```
+
 ## Commands say "OpenWolf not initialized"
 
 **Symptom:** Running commands like `openwolf cron`, `openwolf bug`, or `openwolf daemon` shows "OpenWolf not initialized".

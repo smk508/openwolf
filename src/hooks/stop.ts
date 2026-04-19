@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { getWolfDir, ensureWolfDir, readJSON, writeJSON, appendMarkdown, timeShort } from "./shared.js";
+import { getWolfDir, getSharedWolfDir, ensureWolfDir, readJSON, writeJSON, appendMarkdown, timeShort } from "./shared.js";
 
 interface FileRead {
   count: number;
@@ -119,8 +119,8 @@ async function main(): Promise<void> {
     },
   };
 
-  // Update token-ledger.json
-  const ledgerPath = path.join(wolfDir, "token-ledger.json");
+  // Update token-ledger.json (shared brain file)
+  const ledgerPath = path.join(getSharedWolfDir(), "token-ledger.json");
   const ledger = readJSON(ledgerPath, {
     version: 1,
     created_at: "",
@@ -206,8 +206,8 @@ function checkForMissingBugLogs(wolfDir: string, session: SessionData): void {
  * Check if cerebrum.md was updated recently. If it hasn't been updated in
  * a while and there was significant activity, emit a gentle reminder.
  */
-function checkCerebrumFreshness(wolfDir: string, session: SessionData): void {
-  const cerebrumPath = path.join(wolfDir, "cerebrum.md");
+function checkCerebrumFreshness(_wolfDir: string, session: SessionData): void {
+  const cerebrumPath = path.join(getSharedWolfDir(), "cerebrum.md");
   try {
     const stat = fs.statSync(cerebrumPath);
     const hoursSinceUpdate = (Date.now() - stat.mtimeMs) / (1000 * 60 * 60);

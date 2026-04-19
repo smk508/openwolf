@@ -1,10 +1,11 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { getWolfDir, ensureWolfDir, writeJSON, appendMarkdown, readJSON, timestamp, timeShort } from "./shared.js";
+import { getWolfDir, getSharedWolfDir, ensureWolfDir, writeJSON, appendMarkdown, readJSON, timestamp, timeShort } from "./shared.js";
 
 async function main(): Promise<void> {
   ensureWolfDir();
   const wolfDir = getWolfDir();
+  const sharedDir = getSharedWolfDir();
 
   // Clean up stale .tmp files left from failed atomic writes
   try {
@@ -41,7 +42,7 @@ async function main(): Promise<void> {
 
   // Check cerebrum freshness — remind Claude to learn
   try {
-    const cerebrumPath = path.join(wolfDir, "cerebrum.md");
+    const cerebrumPath = path.join(sharedDir, "cerebrum.md");
     const cerebrumContent = fs.readFileSync(cerebrumPath, "utf-8");
     const stat = fs.statSync(cerebrumPath);
     const daysSinceUpdate = (Date.now() - stat.mtimeMs) / (1000 * 60 * 60 * 24);
@@ -65,7 +66,7 @@ async function main(): Promise<void> {
 
   // Check buglog — remind if empty
   try {
-    const buglogPath = path.join(wolfDir, "buglog.json");
+    const buglogPath = path.join(sharedDir, "buglog.json");
     const buglog = readJSON<{ bugs: unknown[] }>(buglogPath, { bugs: [] });
     if (buglog.bugs.length === 0) {
       process.stderr.write(
@@ -75,7 +76,7 @@ async function main(): Promise<void> {
   } catch {}
 
   // Increment total_sessions in token-ledger
-  const ledgerPath = path.join(wolfDir, "token-ledger.json");
+  const ledgerPath = path.join(sharedDir, "token-ledger.json");
   const ledger = readJSON(ledgerPath, { version: 1, lifetime: { total_sessions: 0 } }) as {
     version: number;
     lifetime: { total_sessions: number };
