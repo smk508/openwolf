@@ -1,0 +1,30 @@
+This product is a fork of OpenWolf (https://github.com/cytostack/openwolf),
+originally Copyright (c) 2026 Cytostack Pvt Ltd, licensed under AGPL-3.0-only.
+
+Fork maintained by Saad Khan starting 2026-04-11.
+Published to npm as @smk508/openwolf.
+
+Modifications from upstream cytostack/openwolf @ bd69835:
+
+  2026-04-08  Add Dart language support. (commit f68be48)
+
+  2026-04-11  Bind dashboard HTTP/WS server to 127.0.0.1 by default; reject
+              cross-origin WebSocket upgrades. Closes a security exposure
+              where the dashboard's POST /api/cron/run endpoint (which
+              executes `claude -p`) was reachable from the LAN.
+              (commit 6afcf94)
+
+  2026-04-11  Extend scanner CODE_EXTENSIONS and token estimator CODE_EXTS
+              to cover Kotlin, Swift, Objective-C, C++ variants, C#, Ruby,
+              PHP, Lua, Vue, Svelte, HTML, Protobuf, GraphQL, Terraform,
+              and shell variants. (commit d71d925)
+
+  2026-04-19  Incorporate upstream PR #18 by @jasper-trustworks: git
+              worktree support. Shared brain files (cerebrum, buglog,
+              token-ledger, identity, config, OPENWOLF.md) live in the
+              main repo's .wolf/ when running inside a worktree;
+              session-specific files (anatomy, memory) stay per-worktree.
+              Originally proposed at cytostack/openwolf#18, closed
+              unmerged by upstream maintainer.
+
+This fork is distributed under AGPL-3.0-only. See LICENSE for full terms.

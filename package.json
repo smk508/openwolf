@@ -1,7 +1,7 @@
 {
-  "name": "openwolf",
-  "version": "1.0.4",
-  "description": "Token-conscious AI brain for Claude Code projects",
+  "name": "@smk508/openwolf",
+  "version": "1.1.0",
+  "description": "Token-conscious AI brain for Claude Code projects (community fork: loopback-only dashboard, extended language support, git worktree support)",
   "type": "module",
   "bin": {
     "openwolf": "./dist/bin/openwolf.js"
@@ -49,14 +49,17 @@
     "node": ">=20.0.0"
   },
   "license": "AGPL-3.0-only",
-  "author": "Cytostack Pvt Ltd",
+  "author": "Saad Khan (fork) — original by Cytostack Pvt Ltd",
   "repository": {
     "type": "git",
-    "url": "https://github.com/cytostack/openwolf.git"
+    "url": "https://github.com/smk508/openwolf.git"
   },
-  "homepage": "https://github.com/cytostack/openwolf",
+  "homepage": "https://github.com/smk508/openwolf#readme",
   "bugs": {
-    "url": "https://github.com/cytostack/openwolf/issues"
+    "url": "https://github.com/smk508/openwolf/issues"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "keywords": [
     "claude",
@@ -71,6 +74,7 @@
     "dist/",
     "src/templates/",
     "LICENSE",
+    "NOTICE",
     "README.md"
   ]
 }

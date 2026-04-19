@@ -10,12 +10,14 @@
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/openwolf"><img src="https://img.shields.io/npm/v/openwolf.svg" alt="npm version" /></a>
+  <a href="https://www.npmjs.com/package/@smk508/openwolf"><img src="https://img.shields.io/npm/v/@smk508/openwolf.svg" alt="npm version" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL--3.0-blue.svg" alt="License: AGPL-3.0" /></a>
   <a href="https://nodejs.org"><img src="https://img.shields.io/badge/Node.js-20%2B-green.svg" alt="Node.js" /></a>
 </p>
 
 ---
+
+> **Community fork.** Maintained fork of [cytostack/openwolf](https://github.com/cytostack/openwolf), published as [`@smk508/openwolf`](https://www.npmjs.com/package/@smk508/openwolf). Adds a critical dashboard-binding security fix (loopback-only by default), extended language support (Kotlin, Swift, Dart, etc.), and git-worktree support for shared brain across parallel agents (incorporated from upstream [PR #18](https://github.com/cytostack/openwolf/pull/18) by [@jasper-trustworks](https://github.com/jasper-trustworks)). Same AGPL-3.0 license as upstream. See [`NOTICE`](NOTICE) for the modification history required by AGPL §5.
 
 ## Why OpenWolf Exists
 
@@ -40,7 +42,7 @@ Across 20 projects, 132+ sessions: average token reduction of 65.8%, with 71% of
 ## Quick Start
 
 ```bash
-npm install -g openwolf
+npm install -g @smk508/openwolf
 cd your-project
 openwolf init
 ```
