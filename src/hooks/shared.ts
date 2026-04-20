@@ -2,6 +2,43 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as crypto from "node:crypto";
 
+export const CONTENT_TYPE = ["code", "prose", "mixed"] as const;
+
+export type ContentType = (typeof CONTENT_TYPE)[number];
+
+export const BINARY_EXTENSIONS = new Set([
+  ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".ico", ".svg",
+  ".woff", ".woff2", ".ttf", ".eot", ".otf",
+  ".zip", ".tar", ".gz", ".bz2", ".7z", ".rar",
+  ".exe", ".dll", ".so", ".dylib", ".bin",
+  ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
+  ".mp3", ".mp4", ".avi", ".mov", ".webm", ".ogg",
+  ".sqlite", ".db",
+  ".wasm",
+  ".lock",
+]);
+
+export const CODE_EXTENSIONS = new Set([
+  ".ts", ".js", ".tsx", ".jsx", ".py", ".rs", ".go", ".java",
+  ".c", ".cpp", ".h", ".css", ".scss", ".sql", ".sh", ".yaml",
+  ".yml", ".json", ".toml", ".xml", ".dart",
+  ".kt", ".kts", ".swift", ".m", ".mm",
+  ".hpp", ".hh", ".cc", ".cxx",
+  ".cs", ".rb", ".php", ".lua",
+  ".vue", ".svelte", ".html", ".htm",
+  ".proto", ".graphql", ".gql", ".tf",
+  ".bash", ".zsh", ".fish",
+]);
+
+export const PROSE_EXTENSIONS = new Set([".md", ".txt", ".rst", ".adoc"]);
+
+export function detectContentType(filePath: string): ContentType {
+  const ext = path.extname(filePath).toLowerCase();
+  if (CODE_EXTENSIONS.has(ext)) return "code";
+  if (PROSE_EXTENSIONS.has(ext)) return "prose";
+  return "mixed";
+}
+
 export function getWolfDir(): string {
   // Prefer CLAUDE_PROJECT_DIR so hooks work even if CWD changes during a session
   const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
@@ -562,7 +599,7 @@ export function extractDescription(filePath: string): string {
   return "";
 }
 
-export function estimateTokens(text: string, type: "code" | "prose" | "mixed" = "mixed"): number {
+export function estimateTokens(text: string, type: ContentType = "mixed"): number {
   const ratio = type === "code" ? 3.5 : type === "prose" ? 4.0 : 3.75;
   return Math.ceil(text.length / ratio);
 }

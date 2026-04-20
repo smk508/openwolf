@@ -1,5 +1,5 @@
 import * as path from "node:path";
-import { getWolfDir, ensureWolfDir, readJSON, writeJSON, readMarkdown, parseAnatomy, estimateTokens, readStdin, normalizePath } from "./shared.js";
+import { getWolfDir, ensureWolfDir, readJSON, writeJSON, readMarkdown, parseAnatomy, estimateTokens, readStdin, normalizePath, detectContentType } from "./shared.js";
 
 interface SessionData {
   files_read: Record<string, { count: number; tokens: number; first_read: string }>;
@@ -37,12 +37,9 @@ async function main(): Promise<void> {
     return;
   }
 
-  const ext = path.extname(filePath).toLowerCase();
-  const codeExts = new Set([".ts", ".js", ".tsx", ".jsx", ".py", ".rs", ".go", ".java", ".c", ".cpp", ".css", ".json", ".yaml", ".yml"]);
-  const proseExts = new Set([".md", ".txt", ".rst"]);
-  const type = codeExts.has(ext) ? "code" : proseExts.has(ext) ? "prose" : "mixed";
+  const type = detectContentType(filePath);
 
-  let tokens = content ? estimateTokens(content, type as "code" | "prose" | "mixed") : 0;
+  let tokens = content ? estimateTokens(content, type) : 0;
 
   // Fallback: if tool_output had no content, use anatomy token estimate
   if (tokens === 0) {
