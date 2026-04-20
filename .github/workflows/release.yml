@@ -20,7 +20,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           registry-url: 'https://registry.npmjs.org'
           cache: 'pnpm'
 
@@ -28,6 +28,7 @@ jobs:
 
       - run: pnpm build
 
-      - run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      # Trusted publishing: OIDC token minted via id-token: write permission above.
+      # No NPM_TOKEN needed. Provenance is generated automatically for public
+      # packages from public repos.
+      - run: npm publish --access public
