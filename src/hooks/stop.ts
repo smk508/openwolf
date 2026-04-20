@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { getWolfDir, getSharedWolfDir, ensureWolfDir, readJSON, writeJSON, appendMarkdown, timeShort } from "./shared.js";
+import { getWolfDir, getSharedWolfDir, ensureWolfDir, readJSON, writeJSON, appendMarkdown, normalizeLedger, timeShort } from "./shared.js";
 
 interface FileRead {
   count: number;
@@ -121,29 +121,7 @@ async function main(): Promise<void> {
 
   // Update token-ledger.json (shared brain file)
   const ledgerPath = path.join(getSharedWolfDir(), "token-ledger.json");
-  const ledger = readJSON(ledgerPath, {
-    version: 1,
-    created_at: "",
-    lifetime: {
-      total_tokens_estimated: 0,
-      total_reads: 0,
-      total_writes: 0,
-      total_sessions: 0,
-      anatomy_hits: 0,
-      anatomy_misses: 0,
-      repeated_reads_blocked: 0,
-      estimated_savings_vs_bare_cli: 0,
-    },
-    sessions: [] as SessionEntry[],
-    daemon_usage: [],
-    waste_flags: [],
-    optimization_report: { last_generated: null, patterns: [] },
-  }) as {
-    version: number;
-    lifetime: Record<string, number>;
-    sessions: SessionEntry[];
-    [key: string]: unknown;
-  };
+  const ledger = normalizeLedger(readJSON(ledgerPath, null));
 
   ledger.sessions.push(sessionEntry);
   ledger.lifetime.total_reads += readCount;

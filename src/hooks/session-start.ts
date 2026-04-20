@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { getWolfDir, getSharedWolfDir, ensureWolfDir, writeJSON, appendMarkdown, readJSON, timestamp, timeShort } from "./shared.js";
+import { getWolfDir, getSharedWolfDir, ensureWolfDir, writeJSON, appendMarkdown, readJSON, normalizeLedger, timestamp, timeShort } from "./shared.js";
 
 async function main(): Promise<void> {
   ensureWolfDir();
@@ -77,11 +77,7 @@ async function main(): Promise<void> {
 
   // Increment total_sessions in token-ledger
   const ledgerPath = path.join(sharedDir, "token-ledger.json");
-  const ledger = readJSON(ledgerPath, { version: 1, lifetime: { total_sessions: 0 } }) as {
-    version: number;
-    lifetime: { total_sessions: number };
-    [key: string]: unknown;
-  };
+  const ledger = normalizeLedger(readJSON(ledgerPath, null));
   ledger.lifetime.total_sessions++;
   writeJSON(ledgerPath, ledger);
 

@@ -113,6 +113,60 @@ export function writeJSON(filePath: string, data: unknown): void {
   }
 }
 
+// ─── Token Ledger Normalization ──────────────────────────────────
+// session-start writes a sparse shape if the file is missing; without
+// normalization, stop.ts then crashes on `ledger.sessions.push(...)`
+// (silently — outer .catch swallows it) and per-session data is lost.
+// One canonical shape, applied on every read, prevents that drift.
+
+export interface TokenLedgerLifetime {
+  total_tokens_estimated: number;
+  total_reads: number;
+  total_writes: number;
+  total_sessions: number;
+  anatomy_hits: number;
+  anatomy_misses: number;
+  repeated_reads_blocked: number;
+  estimated_savings_vs_bare_cli: number;
+}
+
+export interface TokenLedger {
+  version: number;
+  created_at: string;
+  lifetime: TokenLedgerLifetime;
+  sessions: unknown[];
+  daemon_usage: unknown[];
+  waste_flags: unknown[];
+  optimization_report: { last_generated: string | null; patterns: unknown[] };
+}
+
+export function normalizeLedger(ledger: unknown): TokenLedger {
+  const l = (ledger ?? {}) as Partial<TokenLedger>;
+  const lf = (l.lifetime ?? {}) as Partial<TokenLedgerLifetime>;
+  const opt = (l.optimization_report ?? {}) as Partial<TokenLedger["optimization_report"]>;
+  return {
+    version: l.version ?? 1,
+    created_at: l.created_at ?? "",
+    lifetime: {
+      total_tokens_estimated: lf.total_tokens_estimated ?? 0,
+      total_reads: lf.total_reads ?? 0,
+      total_writes: lf.total_writes ?? 0,
+      total_sessions: lf.total_sessions ?? 0,
+      anatomy_hits: lf.anatomy_hits ?? 0,
+      anatomy_misses: lf.anatomy_misses ?? 0,
+      repeated_reads_blocked: lf.repeated_reads_blocked ?? 0,
+      estimated_savings_vs_bare_cli: lf.estimated_savings_vs_bare_cli ?? 0,
+    },
+    sessions: l.sessions ?? [],
+    daemon_usage: l.daemon_usage ?? [],
+    waste_flags: l.waste_flags ?? [],
+    optimization_report: {
+      last_generated: opt.last_generated ?? null,
+      patterns: opt.patterns ?? [],
+    },
+  };
+}
+
 export function readMarkdown(filePath: string): string {
   try {
     return fs.readFileSync(filePath, "utf-8");
