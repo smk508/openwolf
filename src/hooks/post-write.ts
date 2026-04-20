@@ -3,7 +3,8 @@ import * as path from "node:path";
 import * as crypto from "node:crypto";
 import {
   getWolfDir, ensureWolfDir, readJSON, writeJSON, readMarkdown, parseAnatomy, serializeAnatomy,
-  extractDescription, estimateTokens, appendMarkdown, timeShort, readStdin, normalizePath
+  extractDescription, estimateTokens, appendMarkdown, timeShort, readStdin, normalizePath,
+  detectContentType
 } from "./shared.js";
 
 interface SessionData {
@@ -87,11 +88,7 @@ async function main(): Promise<void> {
     }
 
     const desc = extractDescription(absolutePath).slice(0, 100);
-    const ext = path.extname(absolutePath).toLowerCase();
-    const codeExts = new Set([".ts", ".js", ".tsx", ".jsx", ".py", ".json", ".yaml", ".yml", ".css"]);
-    const proseExts = new Set([".md", ".txt", ".rst"]);
-    const type = codeExts.has(ext) ? "code" : proseExts.has(ext) ? "prose" : "mixed";
-    const tokens = estimateTokens(fileContent, type as "code" | "prose" | "mixed");
+    const tokens = estimateTokens(fileContent, detectContentType(absolutePath));
 
     if (!sections.has(sectionKey)) sections.set(sectionKey, []);
     const entries = sections.get(sectionKey)!;
@@ -127,10 +124,8 @@ async function main(): Promise<void> {
     const action = toolName === "Write" ? "Created" : toolName === "MultiEdit" ? "Multi-edited" : "Edited";
     const relFile = normalizePath(path.relative(projectRoot, absolutePath));
     const fileContent = input.tool_input?.content ?? "";
-    const ext = path.extname(absolutePath).toLowerCase();
-    const codeExts = new Set([".ts", ".js", ".tsx", ".jsx", ".py", ".json", ".yaml", ".yml", ".css"]);
-    const type = codeExts.has(ext) ? "code" : "mixed";
-    const writeTokens = estimateTokens(fileContent || newStr, type as "code" | "prose" | "mixed");
+    const type = detectContentType(absolutePath);
+    const writeTokens = estimateTokens(fileContent || newStr, type);
 
     let changeDesc = "";
     if (oldStr && newStr) {

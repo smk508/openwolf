@@ -4,6 +4,7 @@ import { extractDescription, capDescription } from "./description-extractor.js";
 import { readJSON } from "../utils/fs-safe.js";
 import { writeText } from "../utils/fs-safe.js";
 import { normalizePath } from "../utils/paths.js";
+import { BINARY_EXTENSIONS, detectContentType, estimateTokens } from "../hooks/shared.js";
 
 interface AnatomyEntry {
   file: string;
@@ -26,43 +27,8 @@ interface WolfConfig {
   };
 }
 
-const BINARY_EXTENSIONS = new Set([
-  ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".ico", ".svg",
-  ".woff", ".woff2", ".ttf", ".eot", ".otf",
-  ".zip", ".tar", ".gz", ".bz2", ".7z", ".rar",
-  ".exe", ".dll", ".so", ".dylib", ".bin",
-  ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
-  ".mp3", ".mp4", ".avi", ".mov", ".webm", ".ogg",
-  ".sqlite", ".db",
-  ".wasm",
-  ".lock",
-]);
-
-// Keep in sync with CODE_EXTS in src/tracker/token-estimator.ts
-const CODE_EXTENSIONS = new Set([
-  ".ts", ".js", ".tsx", ".jsx", ".py", ".rs", ".go", ".java",
-  ".c", ".cpp", ".h", ".css", ".scss", ".sql", ".sh", ".yaml",
-  ".yml", ".json", ".toml", ".xml", ".dart",
-  ".kt", ".kts", ".swift", ".m", ".mm",
-  ".hpp", ".hh", ".cc", ".cxx",
-  ".cs", ".rb", ".php", ".lua",
-  ".vue", ".svelte", ".html", ".htm",
-  ".proto", ".graphql", ".gql", ".tf",
-  ".bash", ".zsh", ".fish",
-]);
-
-const PROSE_EXTENSIONS = new Set([".md", ".txt", ".rst", ".adoc"]);
-
-function estimateTokens(text: string, filePath: string): number {
-  const ext = path.extname(filePath).toLowerCase();
-  let ratio = 3.75;
-  if (CODE_EXTENSIONS.has(ext)) ratio = 3.5;
-  if (PROSE_EXTENSIONS.has(ext)) ratio = 4.0;
-  return Math.ceil(text.length / ratio);
-}
-
 // Files that should never appear in anatomy (secrets, env files)
-const ALWAYS_EXCLUDE_FILES = new Set([".env", ".env.local", ".env.production", ".env.staging", ".env.development"]);
+export const ALWAYS_EXCLUDE_FILES = new Set([".env", ".env.local", ".env.production", ".env.staging", ".env.development"]);
 
 function shouldExclude(
   relPath: string,
@@ -137,7 +103,8 @@ function walkDir(
       }
 
       const desc = capDescription(extractDescription(fullPath));
-      const tokens = estimateTokens(content, fullPath);
+      const type = detectContentType(fullPath);
+      const tokens = estimateTokens(content, type);
       const section = normalizePath(path.relative(rootDir, dir)) || ".";
       const sectionKey = section === "." ? "./" : section + "/";
 
@@ -298,7 +265,8 @@ export function updateAnatomyEntry(
     }
 
     const desc = capDescription(extractDescription(filePath));
-    const tokens = estimateTokens(fileContent, filePath);
+    const type = detectContentType(filePath);
+    const tokens = estimateTokens(fileContent, type);
     const entry: AnatomyEntry = { file: fileName, description: desc, tokens };
 
     if (!sections.has(sectionKey)) {
